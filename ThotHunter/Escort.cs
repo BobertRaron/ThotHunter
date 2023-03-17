@@ -6,6 +6,8 @@ using System.Threading;
 using System.Linq;
 using OpenQA.Selenium.Interactions;
 using OpenQA.Selenium.Support;
+using OpenQA.Selenium.DevTools.V104.CSS;
+
 namespace ThotHunter
 {
     public static class Escort
@@ -17,11 +19,10 @@ namespace ThotHunter
         /// <param name="driver"></param>
         public static void OtworzEscort(this EdgeDriver driver)
         {
-            driver.Navigate().GoToUrl("https://pl.escort.club/");
-            
+            driver.Navigate().GoToUrl("https://roksa.top/");
             try
             {
-                driver.FindElement(By.XPath("//*[@id=\"adult-only-warning\"]/div/div/div/div[1]/div[2]/a[1]")).Click();
+                driver.FindElement(By.XPath("//*[@id=\"forAdultsModal\"]/div/div/div/div/div[3]/div[1]/button")).Click();
                 
             }
             catch{
@@ -85,6 +86,19 @@ namespace ThotHunter
         }
 
         /// <summary>
+        /// Metoda odpowiedzialna za ustawienie filtrów na wybrane miasto
+        /// </summary>
+        /// <param name="driver"></param>
+        /// <param name="miasto"></param>
+        public static void WyszukajPoMiescie(this EdgeDriver driver, string miasto)
+        {
+            driver.FindElement(By.XPath("//*[@id=\"form_control_input_city\"]")).SendKeys(miasto);
+            driver.FindElement(By.XPath("/html/body/nav/div[3]/div/form/div/div[5]/button")).Click();
+            Thread.Sleep(500);
+
+        }
+
+        /// <summary>
         /// Metoda klikanie przycisku szukaj
         /// </summary>
         /// <param name="driver"></param>
@@ -104,6 +118,7 @@ namespace ThotHunter
         {
             // Ile stron jest dostępnych
             var element = driver.FindElement(By.XPath("/html/body/div[1]/section[4]/div/div[4]/div/ul"));
+
             List<int> ileStron = new List<int>();
             foreach (var li in element.FindElements(By.TagName("a")))
             {
@@ -117,7 +132,6 @@ namespace ThotHunter
                     continue;
                 }
             }
-            Console.ReadLine();
 
             List<string> linki = new List<string>();
             IWebElement content = driver.FindElement(By.XPath("/html/body/div[1]/section[4]/div/div[3]"));
@@ -135,169 +149,113 @@ namespace ThotHunter
             return linki;
         }
 
-        
-
-
-        /// <summary>
-        /// Metoda zwraca element klasy Pani utworzony na podstawie danych pod linkiem
-        /// </summary>
-        /// <param name="driver"></param>
-        public static void WczytajDanePani(this EdgeDriver driver, ref Pani pani)
+        public static List<string> WczytajLinki(this EdgeDriver driver, int przerwijNa = 1000000)
         {
-            Console.WriteLine();
-            string lokalizacja = driver.FindElement(By.XPath("/html/body/div[1]/section[2]/div/div/div[3]/div[1]/div[2]/div[1]/div[1]")).FindElement(By.ClassName("sub-label")).Text;
-            string[] split = lokalizacja.Split(",");
-            string wojewodztwo = split[0];
-            string miasto = split[1];
-            string dzielnica = "";
-            for (int i = 2; i < split.Length; i++)
+            List<string> linki = new List<string>();
+            var kafelki=driver.FindElement(By.XPath("/html/body/div[2]/div[2]/div/div[2]/div")).FindElements(By.ClassName("single-announcement"));
+            foreach (IWebElement kafelek in kafelki)
             {
-                if (i == split.Length - 1)
-                {
-                    dzielnica += split[i];
-                }
-                else
-                {
-                    dzielnica += split[i] + ",";
-                }
+                string link = kafelek.FindElement(By.TagName("div")).FindElement(By.TagName("a")).GetAttribute("href");
+                linki.Add(link);
             }
-            pani.Nazwa = driver.FindElement(By.XPath("/html/body/div[1]/section[2]/div/div/div[3]/div[1]/div[2]/div[1]/h1")).Text;
-            pani.Dzielnica = dzielnica;
-            pani.Wojewodztwo = wojewodztwo;
-            pani.Miasto = miasto;
-            Console.WriteLine(lokalizacja);
-            IWebElement info = driver.FindElement(By.XPath("/html/body/div[1]/section[2]/div/div/div[3]/div[2]/div/div[3]")).FindElement(By.ClassName("stats-box"));
-            foreach (IWebElement e in info.FindElements(By.ClassName("stat-elem")))
-            {
-                string label = e.FindElement(By.ClassName("sub-label")).Text;
-                label = label.Replace(':',' ').Trim();
-                string opis = "brak";
-                try
-                {
-                    opis = e.FindElement(By.ClassName("sub-desc")).Text;
-                    if (opis.Length < 1)
-                    {
-                        opis = "brak";
-                    }
-                }
-               
-                catch (NoSuchElementException) { }
+            return linki;
+        }
+        
+        public static void WczytajDane(this EdgeDriver driver, ref Pani pani)
+        {
+            var infoList = driver.FindElement(By.XPath("/html/body/div[1]/div[2]/div[1]/div[1]/div[2]/div/ul")).FindElements(By.TagName("li"));
 
-                Console.WriteLine(opis);
-                switch (label)
+            foreach (var info in infoList)
+            {
+                string colName = info.FindElement(By.TagName("span")).FindElement(By.TagName("span")).Text;
+                switch (colName)
                 {
                     case "Płeć":
                         {
-                            pani.Płeć = opis;
+                            pani.Płeć = info.FindElement(By.ClassName("fw-600")).Text;
                             break;
-                        }
-                    case "Orientacja":
-                        {
-                            pani.Orientacja = opis;
-                            break;
+
                         }
                     case "Wiek":
                         {
-                            pani.Wiek = int.Parse(opis.Replace("l",""));
-                            break;
-                        }
-                    case "Wzrost":
-                        {
-                            pani.Wzrost = int.Parse(opis.Replace("cm",""));
-                            break;
-                        }
-                    case "Waga":
-                        {
-                            pani.Waga = int.Parse(opis.Replace("kg",""));
+                            pani.Wiek = info.FindElement(By.ClassName("fw-600")).Text;
                             break;
                         }
                     case "Biust":
                         {
-                            pani.Biust = opis;
+                            pani.Biust = info.FindElement(By.ClassName("fw-600")).Text;
                             break;
                         }
-                    case "Oczy":
+                    case "Orientacja":
                         {
-                            pani.Oczy = opis;
-                            break;
-                        }
-                    case "Włosy":
-                        {
-                            pani.Wlosy = opis;
+                            pani.Orientacja = info.FindElement(By.ClassName("fw-600")).Text;
                             break;
                         }
                     case "Wyjazdy":
                         {
-                            pani.Wyjazdy = opis;
+                            pani.Wyjazdy = info.FindElement(By.ClassName("fw-600")).Text;
                             break;
                         }
-                    case "Etniczność":
-                        {
-                            pani.Etniczność = opis;
-                            break;
-                        }
-                    case "Narodowość":
-                        {
-                            pani.Narodowosz = opis;
-                            break;
-                        }
-                    case "Znak zodiaku":
-                        {
-                            pani.ZnakZodiaku = opis;
-                            break;
-                        }
-
+                    default:
+                        Console.WriteLine("brak");
+                        break;
                 }
             }
 
-            info = driver.FindElement(By.XPath("/html/body/div[1]/section[2]/div/div/div[3]/div[2]/div/div[4]")).FindElement(By.ClassName("stats-box"));
-            Dictionary<string, string> cennik = new Dictionary<string, string>();
-            foreach (IWebElement e in info.FindElements(By.ClassName("stat-elem")))
+            infoList = driver.FindElement(By.XPath("/html/body/div[1]/div[2]/div[1]/div[1]/div[3]/div/ul")).FindElements(By.TagName("li"));
+
+            foreach (var info in infoList)
             {
-                string label = e.FindElement(By.ClassName("sub-label")).Text;
-                label = label.Replace(':', ' ').Trim();
-                string opis = "brak";
+                string colName = "cokolwiek";
                 try
                 {
-                    opis = e.FindElement(By.ClassName("sub-desc")).Text.Replace("zł", "");
-                    cennik.Add(label, opis);
+                    colName = info.FindElement(By.TagName("span")).FindElement(By.TagName("span")).Text;
                 }
-                catch (NoSuchElementException) { }   
-
-                foreach (KeyValuePair<string,string> kv in cennik)
+                catch { 
+                }
+                switch (colName)
                 {
-                    string key = kv.Key;
-                    switch (key)
-                    {
-                        case "15 min":
-                            {
-                                pani.CenaZaKwadrans = int.Parse(kv.Value);
-                                break;
-                            }
-                        case "0,5 godz":
-                            {
-                                pani.CenaZaPolGodziny = int.Parse(kv.Value);
-                                break;
-                            }
-                        case "Noc":
-                            {
-                                pani.CenaZaNoc = int.Parse(kv.Value);
-                                break;
-                            }
-                        case "1 godz":
-                            {
-                                pani.CenaZaGodzine = int.Parse(kv.Value);
-                                break;
-                            }
-                        default:
-                            {
-                                pani.Cennik += $"[{key} {kv.Value}]";
-                                break;
-                            }
-                    }
+                    case "Wzrost":
+                        {
+                            pani.Wzrost = info.FindElement(By.ClassName("fw-600")).Text;
+                            break;
+                        }
+                    case "Włosy":
+                        {
+                            pani.Wlosy = info.FindElement(By.ClassName("fw-600")).Text;
+                            break;
+                        }
+                    case "Oczy":
+                        {
+                            pani.Oczy = info.FindElement(By.ClassName("fw-600")).Text;
+                            break;
+                        }
+                    case "Waga":
+                        {
+                            pani.Waga = info.FindElement(By.ClassName("fw-600")).Text;
+                            break;
+                        }
+                    case "Języki":
+                        {
+                            pani.Jezyki = info.FindElement(By.ClassName("fw-600")).Text;
+                            break;
+                        }
+                    case "Tatuaże":
+                        {
+                            pani.Tatuaze = info.FindElement(By.ClassName("fw-600")).Text;
+                            break;
+                        }
+                    default:
+                        Console.WriteLine($"brak - {colName}");
+                        break;
                 }
             }
-            
+
+            var listaUslug = driver.FindElement(By.XPath("/html/body/div[1]/div[2]/div[1]/div[2]")).FindElements(By.ClassName("badge"));
+            foreach (var usluga in listaUslug)
+            {
+                pani.Uslugi += usluga.Text + "||";
+            }
         }
     }
 

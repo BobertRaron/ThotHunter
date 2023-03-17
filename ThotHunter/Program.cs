@@ -24,40 +24,46 @@ namespace ThotHunter
             options.AcceptInsecureCertificates = true;
             EdgeDriver driver = new EdgeDriver(options);
             driver.OtworzEscort();
-            driver.UstawFiltryWojewodztwa("Dolnośląskie");
-            driver.UstawFiltryMiasta("Wrocław");
-            driver.KliknijSzukaj();
-           
-            List<Pani> listaPan = new List<Pani>();
-                List<string> listaLinkow = driver.WczytajDostepneLinki();
-                foreach (string link in listaLinkow)
-                {
-                    Console.WriteLine(link);
-                    Pani pani = new Pani(link);
-                    driver.Navigate().GoToUrl(link);
+            // driver.UstawFiltryWojewodztwa("Dolnośląskie");
+            //driver.UstawFiltryMiasta("Wrocław");
+            //driver.KliknijSzukaj();
 
-                    try
-                    {
-                        driver.WczytajDanePani(ref pani);
-                        listaPan.Add(pani);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        Console.WriteLine("Nie udało się wczytać danych Pani");
-                    }
+            driver.WyszukajPoMiescie("Warszawa");
+
+            List<Pani> listaPan = new List<Pani>();
+            //List<string> listaLinkow = driver.WczytajDostepneLinki();
+            List<string> listaLinkow = driver.WczytajLinki();
+            foreach (string link in listaLinkow)
+            {
+                Console.WriteLine(link);
+                Pani pani = new Pani(link);
+                driver.Navigate().GoToUrl(link);
+                Thread.Sleep(500);
+                try
+                {
+                    driver.WczytajDane(ref pani);
+                    Console.WriteLine(pani.ToString());
+                    Console.WriteLine();
+                    listaPan.Add(pani);
+
                 }
-                
-            
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    Console.WriteLine("Nie udało się wczytać danych Pani");
+                }
+            }
+
+
             driver.Close();
             createExcel(listaPan, "", "asdad");
 
-            
+
         }
 
         public static byte[] createExcel<T>(IEnumerable<T> list, string author, string title)
         {
-            using (ExcelPackage package = new ExcelPackage("C:\\proejtk\\bielsko.xlsx"))
+            using (ExcelPackage package = new ExcelPackage("C:\\proejtk\\wwa.xlsx"))
             {
                 //create the excel file and set some properties
                 package.Workbook.Properties.Author = author;
